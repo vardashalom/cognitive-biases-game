@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>גלגל ההטיות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&family=Assistant:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: a game-show stage. The wheel owns the screen; a slim control rail sits beside it. Questions take over the stage as a full card. */
+:root{
+  --stage:#17153d; --stage-2:#221f55; --panel:#2a2765; --line:#3d3a85;
+  --ink:#f6f3ff; --muted:#b9b4e6;
+  --gold:#ffc83d; --gold-ink:#2b1d00;
+  --coral:#ff6b5b; --teal:#22c3b0; --violet:#8f6bff; --sky:#3fa3ff; --lime:#9bd84a; --pink:#ff5fa8;
+  --ok:#3ddc84; --bad:#ff6b6b;
+  --display:"Secular One","Assistant",system-ui,sans-serif;
+  --body:"Assistant",system-ui,"Segoe UI",Arial,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:radial-gradient(1200px 700px at 50% 35%,var(--stage-2),var(--stage));color:var(--ink);font-family:var(--body);font-size:18px;direction:rtl;margin:0}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button{font:inherit;cursor:pointer;border:0;border-radius:14px;color:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.app{min-height:100%;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px;padding-block:18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+@media (max-width:900px){.app{grid-template-columns:1fr}}
+header.top{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(28px,4vw,46px);margin:0;letter-spacing:.5px;line-height:1}
+h1 span{color:var(--gold)}
+.top-tools{display:flex;gap:8px;flex-wrap:wrap}
+.chipbtn{background:var(--panel);border:1px solid var(--line);padding:8px 14px;font-size:16px;font-weight:600}
+.chipbtn:hover{background:var(--line)}
+.status{display:flex;gap:10px;flex-wrap:wrap;font-size:16px;color:var(--muted)}
+.status b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* Stage */
+.stage{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-width:0}
+.wheel-wrap{position:relative;width:min(78vh,100%,720px);aspect-ratio:1;max-width:100%}
+#wheel{width:100%;height:100%;display:block;filter:drop-shadow(0 18px 40px rgba(0,0,0,.45))}
+.pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:22px solid transparent;border-right:22px solid transparent;border-top:44px solid var(--gold);filter:drop-shadow(0 4px 6px rgba(0,0,0,.5));z-index:2}
+.hub{position:absolute;inset:0;margin:auto;width:22%;height:22%;border-radius:50%;background:var(--stage);border:6px solid var(--gold);display:grid;place-items:center;font-family:var(--display);font-size:clamp(18px,2.6vw,30px);color:var(--gold);box-shadow:0 0 0 6px var(--stage) inset}
+.hub:hover{transform:scale(1.04)}
+.hub:disabled{cursor:default;transform:none;opacity:.9}
+.spin-btn{font-family:var(--display);font-size:clamp(22px,3vw,30px);padding:12px 44px;background:var(--gold);color:var(--gold-ink);box-shadow:0 6px 0 #b98a12}
+.spin-btn:active{transform:translateY(3px);box-shadow:0 3px 0 #b98a12}
+.spin-btn:disabled{opacity:.5;cursor:default}
+.hint{color:var(--muted);font-size:16px;text-align:center;margin:0}
+.claim{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);padding:6px 14px;border-radius:999px;font-size:16px}
+.claim b{color:var(--gold)}
+
+/* Rail */
+.rail{display:flex;flex-direction:column;gap:14px;min-width:0}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px}
+.box h2{font-family:var(--display);font-weight:400;font-size:20px;margin:0 0 10px;color:var(--gold)}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.row label{font-weight:600}
+input[type=number]{width:76px;font:inherit;font-size:18px;padding:6px 8px;border-radius:10px;border:1px solid var(--line);background:var(--stage);color:var(--ink);text-align:center}
+.nums{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px;margin-top:10px}
+.num{background:var(--stage);border:1px solid var(--line);padding:7px 0;font-weight:700;font-size:16px;border-radius:10px;font-variant-numeric:tabular-nums}
+.num.off{opacity:.35;text-decoration:line-through}
+.num:hover{border-color:var(--gold)}
+.small{font-size:14px;color:var(--muted);margin:8px 0 0}
+.qlist{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.qn{background:var(--stage);border:1px solid var(--line);padding:6px 0;font-weight:700;font-size:15px;border-radius:10px}
+.qn.done{background:transparent;color:var(--muted)}
+.qn.next{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+.danger{background:transparent;border:1px solid var(--bad);color:var(--bad);padding:6px 12px;font-size:15px}
+.danger.armed{background:var(--bad);color:#200}
+
+/* Overlays */
+.overlay{position:fixed;inset:0;background:rgba(10,8,30,.78);display:grid;place-items:center;z-index:20;padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));backdrop-filter:blur(3px)}
+.card{background:var(--stage-2);border:2px solid var(--line);border-radius:26px;padding:clamp(18px,3vw,36px);width:min(1000px,100%);max-height:100%;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.result{text-align:center;width:min(620px,100%)}
+.result .big{font-family:var(--display);font-size:clamp(90px,16vw,170px);line-height:1;color:var(--gold);margin:6px 0 4px}
+.result .sub{font-size:22px;color:var(--muted);margin:0 0 20px}
+.actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{padding:14px 26px;font-size:20px;font-weight:800}
+.btn.primary{background:var(--gold);color:var(--gold-ink)}
+.btn.ok{background:var(--ok);color:#022}
+.btn.bad{background:var(--bad);color:#200}
+.btn.ghost{background:var(--panel);border:1px solid var(--line)}
+.btn:disabled{opacity:.45;cursor:default}
+
+.q-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.who{font-family:var(--display);font-size:22px;background:var(--gold);color:var(--gold-ink);padding:4px 16px;border-radius:999px}
+.qcount{color:var(--muted);font-size:18px}
+.qnav{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.back-btn{background:var(--panel);border:1px solid var(--line);padding:8px 18px;font-size:17px;font-weight:700}
+.back-btn:hover{background:var(--line)}
+.q-body{display:grid;grid-template-columns:auto minmax(0,1fr);gap:22px;align-items:start}
+.q-art{font-size:clamp(70px,9vw,120px);line-height:1;padding:10px;background:var(--panel);border-radius:22px}
+@media (max-width:640px){.q-body{grid-template-columns:1fr}.q-art{justify-self:start;font-size:64px}}
+.q-text{font-size:clamp(22px,2.6vw,32px);font-weight:700;line-height:1.35;margin:0 0 18px;text-wrap:balance}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;gap:14px;align-items:flex-start;background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:12px 16px;font-size:clamp(19px,2.1vw,26px);line-height:1.35}
+.opt .L{font-family:var(--display);color:var(--gold);min-width:1.6em}
+.opt.correct{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 18%,var(--panel))}
+.opt.dim{opacity:.5}
+.ask{margin:18px 0 0;font-size:20px;color:var(--muted)}
+.reveal{margin-top:18px;border-radius:18px;padding:16px 20px;background:var(--panel);border:2px dashed var(--gold)}
+.reveal .bias{font-family:var(--display);font-size:clamp(26px,3.4vw,40px);color:var(--gold);margin:0 0 6px}
+.reveal p{margin:0;font-size:clamp(18px,2vw,23px);line-height:1.5}
+.q-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;justify-content:space-between;align-items:center}
+.q-actions .grp{display:flex;gap:12px;flex-wrap:wrap}
+.link{background:none;color:var(--muted);text-decoration:underline;font-size:17px;padding:6px}
+
+.prize-card{text-align:center;width:min(640px,100%);border-color:var(--gold)}
+.prize-card .trophy{font-size:110px;line-height:1}
+.prize-card h2{font-family:var(--display);font-weight:400;font-size:clamp(34px,5vw,56px);margin:6px 0;color:var(--gold)}
+.prize-card p{font-size:22px;margin:0 0 20px}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:30}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<canvas id="confetti"></canvas>
+<div class="app">
+  <header class="top">
+    <h1>גלגל <span>ההטיות</span></h1>
+    <div class="status" aria-live="polite">
+      <span>בגלגל: <b id="stIn">0</b> תלמידים</span>
+      <span>שאלה הבאה: <b id="stQ">1</b> מתוך <b id="stQt">14</b></span>
+    </div>
+    <div class="top-tools">
+      <button class="chipbtn" id="soundBtn" type="button">צליל: פועל</button>
+      <button class="chipbtn" id="fsBtn" type="button">מסך מלא</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="wheel-wrap">
+      <div class="pointer" aria-hidden="true"></div>
+      <canvas id="wheel" width="1000" height="1000" aria-label="גלגל מזל"></canvas>
+      <button class="hub" id="hub" type="button" aria-label="סובבו את הגלגל">סובבו</button>
+    </div>
+    <button class="spin-btn" id="spinBtn" type="button">סובבו את הגלגל</button>
+    <div id="claimLine" class="claim" hidden>אם ייצא פרס הוא יגיע לתלמיד מספר <b id="claimNum"></b></div>
+    <button class="back-btn" id="backQ" type="button">→ חזרה לשאלה הקודמת</button>
+    <p class="hint">אפשר גם ללחוץ על מקש הרווח כדי לסובב</p>
+  </main>
+
+  <aside class="rail">
+    <section class="box">
+      <h2>הכיתה</h2>
+      <div class="row">
+        <label for="countIn">מספר תלמידים</label>
+        <input id="countIn" type="number" min="2" max="40" value="30">
+        <label for="prizeIn">משבצות פרס</label>
+        <input id="prizeIn" type="number" min="0" max="4" value="2">
+      </div>
+      <div class="nums" id="nums"></div>
+      <p class="small">לחיצה על מספר מוציאה אותו מהגלגל. לחיצה נוספת מחזירה אותו.</p>
+      <div class="row" style="margin-top:10px">
+        <button class="chipbtn" id="restoreBtn" type="button">להחזיר את כולם</button>
+      </div>
+    </section>
+    <section class="box">
+      <h2>השאלות</h2>
+      <div class="qlist" id="qlist"></div>
+      <p class="small">הצהוב הוא השאלה הבאה. אפשר ללחוץ על כל שאלה כדי לבחור אותה.</p>
+    </section>
+    <section class="box">
+      <h2>כיתה חדשה</h2>
+      <p class="small" style="margin:0 0 10px">מאפס את הגלגל ואת השאלות לתחילת שיעור.</p>
+      <button class="danger" id="resetBtn" type="button">איפוס לשיעור חדש</button>
+    </section>
+  </aside>
+</div>
+
+<div class="overlay" id="ovResult" hidden>
+  <div class="card result">
+    <div class="sub" id="resTop">יצא המספר</div>
+    <div class="big" id="resNum">17</div>
+    <p class="sub">רוצה לענות על השאלה?</p>
+    <div class="actions">
+      <button class="btn primary" id="answerBtn" type="button">עונה על השאלה</button>
+      <button class="btn ghost" id="skipBtn" type="button">מדלג. מסובבים שוב</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovPrize" hidden>
+  <div class="card prize-card">
+    <div class="trophy" aria-hidden="true">🏆</div>
+    <h2 id="prizeTitle">פרס!</h2>
+    <p id="prizeText"></p>
+    <div class="actions">
+      <button class="btn primary" id="prizeNext" type="button">מסובבים לתלמיד הבא</button>
+    </div>
+    <div class="actions" style="margin-top:14px">
+      <button class="link" id="prizeRemove" type="button">להוריד משבצת פרס אחת מהגלגל</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovQ" hidden>
+  <div class="card">
+    <div class="q-head">
+      <span class="who" id="qWho">תלמיד מספר 17</span>
+      <span class="qnav">
+        <button class="chipbtn" id="qPrev" type="button">→ שאלה קודמת</button>
+        <span class="qcount" id="qCount">שאלה 1 מתוך 14</span>
+        <button class="chipbtn" id="qNext" type="button">שאלה הבאה ←</button>
+      </span>
+    </div>
+    <div class="q-body">
+      <div class="q-art" id="qArt" aria-hidden="true"></div>
+      <div>
+        <p class="q-text" id="qText"></p>
+        <div class="opts" id="qOpts"></div>
+        <p class="ask" id="qAsk">לפני החשיפה: למה בחרת בתשובה הזו? ואיזו הטיה מנסה להשפיע עלינו כאן?</p>
+        <div class="reveal" id="qReveal" hidden>
+          <div class="bias" id="qBias"></div>
+          <p id="qExplain"></p>
+        </div>
+      </div>
+    </div>
+    <div class="q-actions">
+      <button class="link" id="qSkip" type="button">התלמיד מדלג. חזרה לגלגל</button>
+      <button class="btn ghost" id="removeNowBtn" type="button" hidden>להוציא את המספר מהגלגל</button>
+      <div class="grp" id="grpReveal">
+        <button class="btn primary" id="revealBtn" type="button">חשיפת התשובה וההטיה</button>
+      </div>
+      <div class="grp" id="grpJudge" hidden>
+        <button class="btn ok" id="rightBtn" type="button">ענה נכון. לגלגל</button>
+        <button class="btn bad" id="wrongBtn" type="button">לא ענה נכון. לגלגל</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const QUESTIONS = [
+ {art:"🎧",bias:"אפקט העיגון",
+  q:"על אוזניות בחנות כתוב: מחיר קודם 400 ₪. מחיר במבצע 220 ₪. מה כדאי לעשות לפני שקונים?",
+  o:["לבדוק כמה עולות אוזניות דומות בחנויות אחרות.","לקנות מיד כי חוסכים 180 ₪.","לקנות כי המחיר המקורי מוכיח שהן שוות 400 ₪."],c:0,
+  e:"המחיר הקודם של 400 ₪ הוא העוגן. לידו 220 ₪ נראה מציאה. אבל אף אחד לא מבטיח שהאוזניות שוות 400 ₪. רק השוואה למחירים אחרים מראה אם זו באמת הנחה."},
+ {art:"⏰",bias:"שנאת ההפסד",
+  q:"ראית משחק מחשב במבצע שעומד להסתיים בעוד שעה. לא תכננת לקנות אותו בכלל. מה תעשה/י?",
+  o:["לקנות מיד כי מבצע זו הזדמנות.","לקנות אותו עכשיו כי אולי בעתיד ארצה לשחק בו.","להתעלם מהמבצע. ממילא לא תכננתי לקנות את המשחק."],c:2,
+  e:"השעון המתקתק גורם לנו להרגיש שאנחנו ״מפסידים״ משהו. אבל אי אפשר להפסיד הנחה על דבר שלא רצינו מלכתחילה. הכסף שלא הוצאנו הוא החיסכון האמיתי."},
+ {art:"🍿",bias:"אפקט הפיתיון",
+  q:"בדוכן פופקורן יש שלוש אפשרויות: קטן 15 ₪, בינוני 28 ₪, ענק 30 ₪. רצית רק קצת פופקורן. מה תעשה/י?",
+  o:["אקנה ענק כי הוא עולה רק 2 ₪ יותר מהבינוני.","אבחר לפי הכמות שאני באמת רוצה.","לא אקנה פופקורן."],c:1,
+  e:"הבינוני נמצא שם כפיתיון. כמעט אף אחד לא בוחר בו. התפקיד שלו הוא לגרום לענק להיראות משתלם. אם רציתי מעט אז הקטן הוא הבחירה החכמה."},
+ {art:"🏋️",bias:"אופטימיות יתר",
+  q:"את/ה שוקל/ת להירשם לחדר כושר. את/ה מאוד מתלהב/ת מהרעיון ורוצה לקנות מנוי. מה כדאי לעשות?",
+  o:["לקנות עכשיו מנוי שנתי כל עוד יש לי מוטיבציה.","אם יש לי התלהבות כזו אז בטוח שאתמיד.","לבדוק מה ההרגלים שלי עד היום ולבקש תקופת ניסיון או מנוי שאפשר לבטל."],c:2,
+  e:"אופטימיות יתר גורמת לנו להאמין שהפעם זה יהיה אחרת. הרבה מנויים שנתיים נקנים בהתלהבות ונזנחים אחרי חודש. תקופת ניסיון בודקת את המציאות לפני שמשלמים."},
+ {art:"🛒",bias:"שנאת ההפסד",
+  q:"בחרת באתר מוצר שרצית. הוא עולה 60 ₪ ומשלוח חינם ניתן רק מעל 200 ₪. מה כדאי לעשות?",
+  o:["לבדוק אם יש עוד מוצרים שאני צריך/ה שאפשר להוסיף כדי להגיע למשלוח חינם. אולי המוצר הבודד יחד עם המשלוח עדיין משתלם לקנייה.","להעמיס מוצרים לעגלה עד שמגיעים לסכום של משלוח חינם."],c:0,
+  e:"הכאב של ״להפסיד״ את המשלוח החינם חזק יותר מההיגיון. כדי לחסוך משלוח של כמה עשרות שקלים מוסיפים מוצרים ב־140 ₪ שלא היינו קונים בלי זה."},
+ {art:"🎧",bias:"העדפת ההווה",
+  q:"את/ה רוצה לקנות אוזניות גיימינג שעולות 250 ₪. אפשר לקנות אותן עכשיו או לחכות חודשיים לסייל. מה כדאי לעשות?",
+  o:["לקנות עכשיו כי אני רוצה אותן.","אם אני לא צריך/ה אותן בדחיפות, לחכות לסייל ולקנות במחיר נמוך יותר."],c:1,
+  e:"המוח מעדיף הנאה עכשיו על פני רווח בעתיד. אם אין צורך דחוף אז ההמתנה שווה כסף. כאן אין תשובה אחת מושלמת ולכן חשוב לנמק את הבחירה."},
+ {art:"📶",bias:"אפקט הפיתיון",
+  q:"חברת סלולר מציעה שלוש חבילות גלישה: 50 גיגה ב־12 ₪ לחודש, 200 גיגה ב־30 ₪ לחודש, 300 גיגה ב־35 ₪ לחודש. עד היום לא עברת אף פעם 35 גיגה בחודש. במה תבחר/י?",
+  o:["50 גיגה. זה מספיק לי.","300 גיגה. זה רק 5 ₪ יותר מהחבילה של 200.","200 גיגה. ליתר ביטחון."],c:0,
+  e:"החבילה של 200 גיגה היא הפיתיון. ליד 30 ₪ החבילה של 35 ₪ נראית כמו מציאה. אבל אני צריך/ה פחות מ־50 גיגה בחודש. מי שבוחר בחבילה הגדולה משלם 23 ₪ יותר כל חודש. זה 276 ₪ בשנה על גלישה שלא ישתמש בה."},
+ {art:"🎮",bias:"אפקט העיגון",
+  q:"חבר אומר שהמשחק החדש שווה לפחות 600 ₪. איך כדאי להחליט אם לקנות אותו?",
+  o:["לקנות כי חבר שלי מבין בזה.","לבדוק ביקורות ומחירים בחנויות שונות ולחשוב כמה באמת אשחק בו.","אם בא לי על המשחק אקנה אותו בכל מחיר."],c:1,
+  e:"המספר 600 שהחבר זרק הפך לעוגן. מעכשיו כל מחיר מתחתיו ייראה לנו הוגן. המחיר האמיתי נקבע לפי השוואה ולפי כמה המשחק שווה לי."},
+ {art:"🎟️",bias:"שנאת ההפסד",
+  q:"קנית כרטיס להופעה ב־200 ₪ אבל גילית שבתאריך הזה לא תוכל/י להגיע. מה תעשה/י?",
+  o:["אשאיר את הכרטיס. אין לי כוח להתעסק עם זה.","אמכור רק אם מישהו ישלם לי את המחיר המלא.","אמכור את הכרטיס דרך אתר מכירה גם אם אשלם עמלה של 30 ₪."],c:2,
+  e:"קשה לנו לקבל הפסד קטן ולכן אנחנו מחכים ומקווים. בסוף ההופעה עוברת ומפסידים את כל ה־200 ₪. עדיף להפסיד 30 ₪ מאשר להפסיד הכל."},
+ {art:"🏊",bias:"אפקט הפיתיון",
+  q:"חדר כושר מציע שלושה מסלולים: בסיסי 200 ₪, פלוס 340 ₪, פרימיום 350 ₪ (כולל בריכה). במה תבחר/י?",
+  o:["אבדוק במה אשתמש באמת ואבחר לפי זה. גם אם זה הבסיסי.","פרימיום. בעשרה שקלים יותר מקבלים גם בריכה.","פלוס. זה המסלול האמצעי."],c:0,
+  e:"מסלול ״פלוס״ הוא הפיתיון. הוא קיים כדי שהפרימיום ייראה כמו מתנה. אם אני לא שוחה אז הבריכה שווה לי אפס ואני משלם/ת 150 ₪ יותר."},
+ {art:"👟",bias:"אפקט העיגון",
+  q:"בחנות נעלי ספורט יש דגם ב־500 ₪ ולידו דגם במבצע ב־350 ₪. מה תעשה/י?",
+  o:["אקנה את אלו שבמבצע. הם בטוח משתלמים.","אקנה את אלו של 500 ₪. אם הם יקרים יותר אז הם טובים יותר.","אבדוק אם הדגם של 350 ₪ מתאים לי ומה המחיר שלו בחנויות אחרות."],c:2,
+  e:"הנעל של 500 ₪ מוצבת שם כעוגן. לידה 350 ₪ נראה זול. אבל השאלה האמיתית היא אם הנעל מתאימה לי ואם המחיר שלה הוגן בהשוואה לחנויות אחרות."},
+ {art:"💻",bias:"אפקט ברירת המחדל",
+  q:"קנית משחק חדש. בהתקנה מופיעה אפשרות להצטרף לשירות בתשלום חודשי והאפשרות כבר מסומנת. מה כדאי לעשות?",
+  o:["להשאיר את הסימון.","לבדוק מה השירות נותן. אם הוא לא מעניין אותי, להוריד את הסימון.","להשאיר את הסימון. תמיד אפשר לבטל."],c:1,
+  e:"רוב האנשים לא משנים את מה שכבר מסומן בשבילם והחברות יודעות את זה. ״תמיד אפשר לבטל״ נשמע הגיוני אבל בפועל רובנו שוכחים וממשיכים לשלם."},
+ {art:"📦",bias:"שנאת ההפסד",
+  q:"באתר קניות מופיעה הודעה: ״נותרו רק 2 מוצרים במלאי! הזדרזו!״ מה תעשה/י?",
+  o:["אבדוק אם אני באמת צריך/ה את המוצר ואם המחיר טוב ביחס למקומות אחרים. ואז אחליט.","אם המוצר ייגמר אני ממש אצטער שפספסתי. אז אקנה עכשיו."],c:0,
+  e:"החשש לפספס גורם לנו לקנות בחיפזון. הודעות על מלאי שעומד להיגמר הן טקטיקה שיווקית נפוצה. מערכת 2 עוצרת ובודקת לפני שמשלמים."},
+ {art:"📱",bias:"אופטימיות יתר",
+  q:"קנית טלפון חדש ב־3,000 ₪. מגן ומגן מסך עולים יחד 80 ₪. מה תעשה/י?",
+  o:["לא צריך. אני זהיר/ה והטלפון לא ייפול לי.","אקנה מגן. 80 ₪ זה מעט לעומת תיקון מסך.","אחכה שהטלפון ייפול פעם אחת ואז אקנה."],c:1,
+  e:"כולנו מאמינים שדברים רעים קורים לאחרים ולא לנו. אבל טלפונים נופלים לכולם ותיקון מסך עולה מאות שקלים. מגן זול הוא ביטוח פשוט."}
+];
+const LETTERS=["א","ב","ג","ד"];
+const SEG_COLORS=["#ff6b5b","#22c3b0","#8f6bff","#3fa3ff","#9bd84a","#ff5fa8"];
+const GOLD="#ffc83d";
+
+/* ---------- state ---------- */
+const KEY="bias-wheel-v1";
+let S={count:30,prizes:2,removed:[],done:[],qIndex:0,lastCorrect:null,sound:true};
+try{const raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw));}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+let rotation=0, spinning=false, segments=[], drawn=null;
+
+function buildSegments(){
+  const nums=[];for(let i=1;i<=S.count;i++) if(!S.removed.includes(i)) nums.push({type:"num",n:i});
+  const segs=nums.slice();
+  const p=Math.max(0,S.prizes|0);
+  if(nums.length && p){
+    const step=(nums.length+p)/p;
+    for(let k=0;k<p;k++){ segs.splice(Math.min(segs.length,Math.round(step*k+step/2)),0,{type:"prize"}); }
+  }
+  segments=segs;
+}
+
+/* ---------- wheel drawing ---------- */
+const cv=document.getElementById("wheel"), ctx=cv.getContext("2d");
+function drawWheel(){
+  const W=cv.width, R=W/2-8, cx=W/2, cy=W/2;
+  ctx.clearRect(0,0,W,W);
+  if(!segments.length){
+    ctx.fillStyle="#2a2765";ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#f6f3ff";ctx.font="700 44px Assistant, sans-serif";ctx.textAlign="center";
+    ctx.fillText("אין מספרים בגלגל",cx,cy-200);return;
+  }
+  const n=segments.length, a=Math.PI*2/n;
+  let ci=0;
+  for(let i=0;i<n;i++){
+    const s=segments[i];
+    const start=rotation-Math.PI/2+i*a-a/2;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,R,start,start+a);ctx.closePath();
+    if(s.type==="prize"){ctx.fillStyle=GOLD;}else{ctx.fillStyle=SEG_COLORS[ci%SEG_COLORS.length];ci++;}
+    ctx.fill();ctx.strokeStyle="#17153d";ctx.lineWidth=4;ctx.stroke();
+    ctx.save();ctx.translate(cx,cy);
+    const mid=((start+a/2)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+    const flip=mid>Math.PI/2&&mid<Math.PI*1.5;
+    ctx.rotate(start+a/2+(flip?Math.PI:0));
+    ctx.textAlign=flip?"left":"right";ctx.textBaseline="middle";
+    const X=flip?-(R-24):(R-24);
+    const fs=Math.max(22,Math.min(64,a*R*0.55));
+    if(s.type==="prize"){
+      ctx.fillStyle="#2b1d00";ctx.font=`400 ${Math.min(fs*0.95,60)}px "Secular One", sans-serif`;
+      ctx.fillText("פרס",X,0);
+    }else{
+      ctx.fillStyle="#ffffff";ctx.font=`800 ${fs}px Assistant, sans-serif`;
+      ctx.shadowColor="rgba(0,0,0,.35)";ctx.shadowBlur=6;
+      ctx.fillText(String(s.n),X,0);
+    }
+    ctx.restore();
+  }
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.lineWidth=14;ctx.strokeStyle=GOLD;ctx.stroke();
+  for(let i=0;i<n;i++){const t=rotation-Math.PI/2+i*a-a/2;ctx.beginPath();ctx.arc(cx+Math.cos(t)*R,cy+Math.sin(t)*R,7,0,Math.PI*2);ctx.fillStyle="#fff7da";ctx.fill();}
+}
+function indexAtPointer(){
+  const n=segments.length,a=Math.PI*2/n;
+  let r=((-rotation)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+  return Math.round(r/a)%n;
+}
+
+/* ---------- sound ---------- */
+let AC=null;
+function tick(freq=900,dur=.04,vol=.12){
+  if(!S.sound) return;
+  try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    const o=AC.createOscillator(),g=AC.createGain();o.type="triangle";o.frequency.value=freq;
+    g.gain.setValueAtTime(vol,AC.currentTime);g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+dur);
+    o.connect(g).connect(AC.destination);o.start();o.stop(AC.currentTime+dur);}catch(e){}
+}
+function fanfare(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tick(f,.25,.15),i*130));}
+
+/* ---------- spin ---------- */
+function spin(){
+  if(spinning||!segments.length) return;
+  if(!segments.some(s=>s.type==="num")) return;
+  spinning=true;setSpinUI();
+  const n=segments.length,a=Math.PI*2/n;
+  const target=Math.floor(Math.random()*n);
+  const jitter=(Math.random()-.5)*a*0.7;
+  const turns=5+Math.floor(Math.random()*3);
+  const cur=((rotation%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+  const want=((-target*a+jitter)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+  let delta=want-cur; if(delta<0) delta+=Math.PI*2;
+  const start=rotation, total=delta+turns*Math.PI*2;
+  const dur=matchMedia("(prefers-reduced-motion: reduce)").matches?600:5200;
+  const t0=performance.now(); let lastIdx=indexAtPointer();
+  function frame(now){
+    const t=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-t,4);
+    rotation=start+total*e; drawWheel();
+    const idx=indexAtPointer(); if(idx!==lastIdx){lastIdx=idx;tick();}
+    if(t<1) requestAnimationFrame(frame); else {spinning=false;setSpinUI();landed(segments[indexAtPointer()]);}
+  }
+  requestAnimationFrame(frame);
+}
+function setSpinUI(){
+  const none=!segments.some(s=>s.type==="num");
+  document.getElementById("spinBtn").disabled=spinning||none;
+  document.getElementById("hub").disabled=spinning||none;
+}
+
+/* ---------- flow ---------- */
+const $=id=>document.getElementById(id);
+function show(id){["ovResult","ovPrize","ovQ"].forEach(o=>$(o).hidden=(o!==id));}
+
+function landed(seg){
+  if(seg.type==="prize"){
+    if(S.lastCorrect!=null){
+      $("prizeTitle").textContent="פרס!";
+      $("prizeText").textContent=`הפרס הולך לתלמיד מספר ${S.lastCorrect} שענה נכון על השאלה האחרונה.`;
+      $("prizeNext").textContent="מסובבים לתלמיד הבא";
+      S.lastCorrect=null; save(); updateClaim();
+      show("ovPrize"); fanfare(); confetti();
+    }else{
+      $("prizeTitle").textContent="יצא פרס";
+      $("prizeText").textContent="אבל אף אחד לא ענה נכון לפני הסיבוב הזה ולכן הפרס לא נחשב. מסובבים שוב.";
+      $("prizeNext").textContent="מסובבים שוב";
+      show("ovPrize");
+    }
+    return;
+  }
+  drawn=seg.n;
+  $("resNum").textContent=seg.n;
+  show("ovResult"); tick(1200,.18,.15);
+}
+
+$("skipBtn").onclick=()=>{ S.lastCorrect=null; save(); updateClaim(); show(null); setTimeout(spin,250); };
+$("removeNowBtn").onclick=()=>{ if(drawn!=null&&!S.removed.includes(drawn)){S.removed.push(drawn);save();refresh();} $("removeNowBtn").textContent=`מספר ${drawn} יצא מהגלגל`; $("removeNowBtn").disabled=true; };
+$("answerBtn").onclick=()=>openQuestion();
+$("prizeNext").onclick=()=>{ show(null); setTimeout(spin,250); };
+$("prizeRemove").onclick=()=>{ if(S.prizes>0){S.prizes--;save();refresh();} $("prizeRemove").textContent="משבצת פרס הוסרה"; setTimeout(()=>$("prizeRemove").textContent="להוריד משבצת פרס אחת מהגלגל",1500); };
+
+function openQuestion(){
+  const q=QUESTIONS[S.qIndex];
+  $("qWho").hidden=drawn==null;
+  $("qWho").textContent=`תלמיד מספר ${drawn}`;
+  $("qCount").textContent=`שאלה ${S.qIndex+1} מתוך ${QUESTIONS.length}`;
+  $("qArt").textContent=q.art;
+  $("qText").textContent=q.q;
+  $("qOpts").innerHTML="";
+  q.o.forEach((t,i)=>{const d=document.createElement("div");d.className="opt";d.innerHTML=`<span class="L">${LETTERS[i]}.</span><span></span>`;d.lastChild.textContent=t;$("qOpts").appendChild(d);});
+  $("qReveal").hidden=true;$("qAsk").hidden=false;
+  $("grpReveal").hidden=false;$("grpJudge").hidden=true;$("qSkip").hidden=false;$("removeNowBtn").hidden=true;
+  show("ovQ");
+}
+$("revealBtn").onclick=()=>{
+  const q=QUESTIONS[S.qIndex];
+  [...$("qOpts").children].forEach((el,i)=>el.classList.add(i===q.c?"correct":"dim"));
+  $("qBias").textContent=q.bias;$("qExplain").textContent=q.e;
+  $("qReveal").hidden=false;$("qAsk").hidden=true;
+  $("grpReveal").hidden=true;$("grpJudge").hidden=false;$("qSkip").hidden=true;
+  const rb=$("removeNowBtn");rb.hidden=false;rb.disabled=S.removed.includes(drawn);
+  rb.textContent=rb.disabled?`מספר ${drawn} כבר לא בגלגל`:`להוציא את מספר ${drawn} מהגלגל`;
+  tick(700,.2,.12);
+};
+function finishQuestion(correct){
+  if(!S.done.includes(S.qIndex)) S.done.push(S.qIndex);
+  S.lastCorrect=correct?drawn:null;
+  // next not-done question
+  let next=-1;for(let k=1;k<=QUESTIONS.length;k++){const j=(S.qIndex+k)%QUESTIONS.length;if(!S.done.includes(j)){next=j;break;}}
+  S.qIndex=next===-1?(S.qIndex+1)%QUESTIONS.length:next;
+  save();refresh();show(null);
+  if(correct){confetti(.5);tick(988,.15,.15);setTimeout(()=>tick(1319,.25,.15),140);}
+}
+function stepQ(d){S.qIndex=(S.qIndex+d+QUESTIONS.length)%QUESTIONS.length;save();refresh();openQuestion();}
+$("qPrev").onclick=()=>stepQ(-1);
+$("qNext").onclick=()=>stepQ(1);
+$("backQ").onclick=()=>{ if(spinning) return; stepQ(-1); };
+$("rightBtn").onclick=()=>finishQuestion(true);
+$("wrongBtn").onclick=()=>finishQuestion(false);
+$("qSkip").onclick=()=>{S.lastCorrect=null;save();updateClaim();show(null);setTimeout(spin,250);};
+
+/* ---------- rail ---------- */
+function renderNums(){
+  const box=$("nums");box.innerHTML="";
+  for(let i=1;i<=S.count;i++){
+    const b=document.createElement("button");b.type="button";b.className="num"+(S.removed.includes(i)?" off":"");b.textContent=i;
+    b.setAttribute("aria-pressed",S.removed.includes(i)?"true":"false");
+    b.onclick=()=>{ if(spinning) return; const k=S.removed.indexOf(i); if(k>=0) S.removed.splice(k,1); else S.removed.push(i); save(); refresh(); };
+    box.appendChild(b);
+  }
+}
+function renderQList(){
+  const box=$("qlist");box.innerHTML="";
+  QUESTIONS.forEach((q,i)=>{const b=document.createElement("button");b.type="button";b.className="qn"+(i===S.qIndex?" next":S.done.includes(i)?" done":"");b.textContent=i+1;
+    b.title=S.done.includes(i)?"כבר נשאלה":"";b.onclick=()=>{S.qIndex=i;save();refresh();};box.appendChild(b);});
+}
+function updateClaim(){ $("claimLine").hidden=S.lastCorrect==null; $("claimNum").textContent=S.lastCorrect??""; }
+function refresh(){
+  buildSegments();drawWheel();renderNums();renderQList();updateClaim();setSpinUI();
+  $("stIn").textContent=segments.filter(s=>s.type==="num").length;
+  $("stQ").textContent=S.qIndex+1;$("stQt").textContent=QUESTIONS.length;
+  $("countIn").value=S.count;$("prizeIn").value=S.prizes;
+  $("soundBtn").textContent=S.sound?"צליל: פועל":"צליל: כבוי";
+}
+$("countIn").addEventListener("change",e=>{let v=Math.max(2,Math.min(40,parseInt(e.target.value)||30));S.count=v;S.removed=S.removed.filter(n=>n<=v);save();refresh();});
+$("prizeIn").addEventListener("change",e=>{S.prizes=Math.max(0,Math.min(4,parseInt(e.target.value)||0));save();refresh();});
+$("restoreBtn").onclick=()=>{S.removed=[];save();refresh();};
+let armed=null;
+$("resetBtn").onclick=()=>{
+  const b=$("resetBtn");
+  if(!armed){b.classList.add("armed");b.textContent="ללחוץ שוב לאישור";armed=setTimeout(()=>{armed=null;b.classList.remove("armed");b.textContent="איפוס לשיעור חדש";},3000);return;}
+  clearTimeout(armed);armed=null;b.classList.remove("armed");b.textContent="איפוס לשיעור חדש";
+  S.removed=[];S.done=[];S.qIndex=0;S.lastCorrect=null;save();refresh();
+};
+$("soundBtn").onclick=()=>{S.sound=!S.sound;save();refresh();};
+$("fsBtn").onclick=()=>{try{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(()=>{});}catch(e){}};
+$("spinBtn").onclick=spin;$("hub").onclick=spin;
+document.addEventListener("keydown",e=>{
+  if(e.code==="Space"&&e.target.tagName!=="INPUT"&&e.target.tagName!=="BUTTON"){
+    if([...document.querySelectorAll(".overlay")].every(o=>o.hidden)){e.preventDefault();spin();}
+  }
+});
+
+/* ---------- confetti ---------- */
+const cc=$("confetti"),cx2=cc.getContext("2d");let parts=[],raf=null;
+function confetti(scale=1){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  cc.width=innerWidth;cc.height=innerHeight;
+  const cols=[GOLD,...SEG_COLORS];
+  for(let i=0;i<220*scale;i++) parts.push({x:innerWidth/2+(Math.random()-.5)*200,y:innerHeight*.35,vx:(Math.random()-.5)*16,vy:-Math.random()*16-4,s:6+Math.random()*8,c:cols[i%cols.length],r:Math.random()*6,vr:(Math.random()-.5)*.3,life:0});
+  if(!raf) raf=requestAnimationFrame(stepC);
+}
+function stepC(){
+  cx2.clearRect(0,0,cc.width,cc.height);
+  parts.forEach(p=>{p.vy+=.35;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;p.life++;
+    cx2.save();cx2.translate(p.x,p.y);cx2.rotate(p.r);cx2.fillStyle=p.c;cx2.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);cx2.restore();});
+  parts=parts.filter(p=>p.y<cc.height+40&&p.life<400);
+  if(parts.length) raf=requestAnimationFrame(stepC); else {raf=null;cx2.clearRect(0,0,cc.width,cc.height);}
+}
+
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(drawWheel);
+refresh();
+</script>
+
+</body>
+</html>
